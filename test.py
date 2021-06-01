@@ -14,3 +14,22 @@ except IndexError:
 
 import carla
 import random
+import time
+
+actor_list = []
+try:
+    client = carla.Client('localhost', 2000)
+    world = client.get_world()
+    blueprint_library = world.get_blueprint_library()
+    bp = blueprint_library.filter('audi')[0]
+    spawn_point = random.choice(world.get_map().get_spawn_points())
+    vehicle = world.spawn_actor(bp, spawn_point)
+    vehicle.apply_control(carla.VehicleControl(throttle=0.4, steer=0.1))
+    actor_list.append(vehicle)
+    time.sleep(50)
+
+
+finally:
+    for item in actor_list:
+        item.destroy()
+    print('done')
