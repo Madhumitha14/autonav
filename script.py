@@ -23,35 +23,53 @@ from carla import VehicleLightState as vls  # noqa
 # END OF IMPORT CARLA
 
 # CONSTANTS
-SHOW_PREVIEW = False
+VEHICLE_NAME = 'audi'
+MODEL_NAME = 'a2'
+IMAGE_SIZE_X = 600
+IMAGE_SIZE_Y = 400
 
 
 class CarlaEnvironment:
 
-    def __init__(self, map='Town01', synchronous_master=True):
+    def __init__(self, map='Town01'):
         self.client = carla.Client('localhost', 2000)
-        # self.client.set_timeout(2.0)
         self.world = self.client.load_world(map)
         self.map = self.world.get_map()
         self.blueprint_library = self.world.get_blueprint_library()
         self.spawn_points = self.map.get_spawn_points()
+        self.actor_list = []
+        vehicle_blueprint = self.blueprint_library.filter(
+            f"vehicle.{VEHICLE_NAME}.{MODEL_NAME}")
+        vehilce_spawn_location = random.choice(self.map.get_spawn_points())
+        self.vehicle = world.try_spawn_actor(
+            vehicle_blueprint, vehilce_spawn_location)
+        self.actor_list.append(self.vehicle)
 
-    # def process_img(self, image):
-    #     i = np.array(image.raw_data)
-    #     # print(i.shape)
-    #     i2 = i.reshape((self.im_height, self.im_width, 4))
-    #     i3 = i2[:, :, :3]
-    #     if self.SHOW_CAM:
-    #         cv2.imshow("", i3)
-    #         cv2.waitKey(1)
-    #     self.front_camera = i3
-    #     return i3/255.0
+    def add_rgb_camera(self, x=3, y=0, z=2):
+        rgb_camera_bp = self.blueprint_library.find('sensor.camera.rgb')
+        rgb_camera_bp.set_attribute("image_size_x", f"{IMAGE_SIZE_X}")
+        rgb_camera_bp.set_attribute("image_size_y", f"{IMAGE_SIZE_Y}")
+        rgb_camera_bp.set_attribute("fov", "120")
+        rgb_camera_transform = carla.Transform(carla.Location(x, y, z))
+        self.rgb_camera = self.world.spawn_actor(
+            rgb_camera_bp, rgb_camera_transform, attach_to=self.vehicle)
+        self.actor_list.append(self.rgb_camera)
 
-    # def step(self, action):
-    #     if action == 0:
-    #         self.vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=1*self.STEER_AMOUNT))
-    #         pass
-    #     elif action == 1:
-    #         pass
-    #     elif action == 2:
-    #         pass
+    def add_depth_sensor(self, x=3, y=0, z=2):
+        depth_sensor_bp = self.blueprint_library.find('sensor.camera.depth')
+        depth_sensor_bp.set_attribute("image_size_x", f"{IMAGE_SIZE_X}")
+        depth_sensor_bp.set_attribute("image_size_y", f"{IMAGE_SIZE_Y}")
+        depth_sensor_bp.set_attribute("fov", "120")
+        depth_sensor_transform = carla.Transform(carla.Location(x, y, z))
+        self.depth_sensor = self.world.spawn_actor(
+            depth_sensor_bp, depth_sensor_transform, attach_to=self.vehicle)
+        self.actor_list.append(self.rgb_camera)
+
+    def show_preview(self):
+        def process_image(image):
+            img = np.array(image.raw_data)
+            img = img.reshape((IMAGE_SIZE_Y, IMAGE_SIZE_X, 4))
+            img = img[:, :, :3]
+            cv2.imshow("RGB Camera", img)
+            cv2.waitKey(1)
+        self.rgb_camera.listen(lambda image: process_image(image))
