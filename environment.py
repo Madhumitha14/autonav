@@ -24,8 +24,8 @@ from carla import VehicleLightState as vls  # noqa
 # CONSTANTS
 VEHICLE_NAME = 'audi'
 MODEL_NAME = 'a2'
-IMAGE_SIZE_X = 600
-IMAGE_SIZE_Y = 500
+IMAGE_SIZE_X = 533
+IMAGE_SIZE_Y = 300
 
 
 class CarlaEnvironment:
@@ -39,6 +39,8 @@ class CarlaEnvironment:
         self.actor_list = []
         self.collisions = []
         self.lane_invasions = []
+        self.rgb_camera_data = None
+        self.depth_camera_data = None
 
     def reset(self):
         self.actor_list = []
@@ -66,7 +68,7 @@ class CarlaEnvironment:
         rgb_camera_transform = carla.Transform(carla.Location(x, y, z))
         self.rgb_camera = self.world.try_spawn_actor(rgb_camera_bp, rgb_camera_transform, attach_to=self.vehicle)  # noqa
         self.actor_list.append(self.rgb_camera)
-        self.rgb_camera.listen(lambda image: self.process_image(image))
+        self.rgb_camera.listen(lambda image: self.process_image(image, 'rgb'))
 
     def add_depth_sensor(self, x=3, y=0, z=2):
         depth_sensor_bp = self.blueprint_library.find('sensor.camera.depth')
@@ -76,7 +78,7 @@ class CarlaEnvironment:
         depth_sensor_transform = carla.Transform(carla.Location(x, y, z))
         self.depth_sensor = self.world.try_spawn_actor(depth_sensor_bp, depth_sensor_transform, attach_to=self.vehicle)  # noqa
         self.actor_list.append(self.rgb_camera)
-        self.depth_sensor.listen(lambda image: self.process_image(image))
+        self.depth_sensor.listen(lambda image: self.process_image(image, 'depth'))
 
     def add_collision_sensor(self):
         collision_sensor_bp = self.blueprint_library.find('sensor.other.collision')  # noqa
@@ -96,12 +98,17 @@ class CarlaEnvironment:
     def handle_lane_invasion(self, event):
         self.lane_invasions.append(event)
 
-    def process_image(self, image):
+    def process_image(self, image, camera):
         img = np.array(image.raw_data)
         img = img.reshape((IMAGE_SIZE_Y, IMAGE_SIZE_X, 4))
         img = img[:, :, :3]
-        cv2.imshow("RGB Camera", img)
-        cv2.waitKey(1)
+        # if show_preview == True:
+        #     cv2.imshow("Hood Cam", img)
+        #     cv2.waitKey(1)
+        if camera == 'rgb':
+            self.rgb_camera_data = img
+        if camera == 'depth':
+            self.depth_sensor_data = img
 
     def step(self, action):
         if action == 0:
