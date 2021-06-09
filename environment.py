@@ -5,6 +5,7 @@ import os
 import glob
 import numpy as np
 import cv2
+import math
 
 # IMPORT CARLA
 CARLA_PATH = 'C:/Users/saile/Desktop/Sailesh/Carla Simulator/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg'
@@ -55,6 +56,7 @@ class CarlaEnvironment:
         self.rgb_camera = None
         self.depth_sensor = None
         self.episode_start = time.time()
+        return self.rgb_camera
 
     def add_rgb_camera(self, x=3, y=0, z=2):
         rgb_camera_bp = self.blueprint_library.find('sensor.camera.rgb')
@@ -119,10 +121,10 @@ class CarlaEnvironment:
         if action == 5:
             self.vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))  # noqa
         if action == 6:
-            self.vehicle.apply_control(carla.VehicleControl(throttle=0.0, steer=0.0))  # noqa
+            self.vehicle.apply_control(carla.VehicleControl(throttle=0.2, steer=0.0))  # noqa
 
         velocity = self.vehicle.get_velocity()
-        kmh = int(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
+        kmh = int(3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2))
 
         if len(self.collision) != 0:
             done = True

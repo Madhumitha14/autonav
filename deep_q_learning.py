@@ -3,7 +3,6 @@ import numpy as np
 from collections import deque
 from keras.applications.xception import Xception
 from keras.layers import Dense, GlobalAveragePooling2D
-from tensorflow.keras.optimizers import Adam
 from keras.models import Model
 from modified_tensorboard import ModifiedTensorBoard
 import tensorflow as tf
@@ -19,9 +18,6 @@ TRAINING_BATCH_SIZE = MINIBATCH_SIZE // 4
 UPDATE_TARGET_EVERY = 5
 
 DISCOUNT = 0.99
-epsilon = 1
-EPSILON_DECAY = 0.95
-MIN_EPSILON = 0.001
 
 
 class DQNAgent:
@@ -40,13 +36,12 @@ class DQNAgent:
         self.training_initialized = False
 
     def create_model(self):
-        base_model = Xception(weights=None, inlcude_top=False, input_shape=(self.im_height, self.im_width, 3))  # noqa
+        base_model = Xception(weights=None, include_top=False, input_shape=(self.im_height, self.im_width, 3))  # noqa
         x = base_model.output
         x = GlobalAveragePooling2D()(x)
-        # TODO: change the number of dense layers to be equal to actions space
-        predictions = Dense(3, activation="linear")(x)
+        predictions = Dense(7, activation="linear")(x)
         model = Model(inputs=base_model.input, outputs=predictions)
-        model.compile(loss="mse", optimizer=Adam(lr=0.001), metrics=['accuracy'])  # noqa
+        model.compile(loss="mse", optimizer='adam', metrics=['accuracy'])  # noqa
         return model
 
     def update_replay_memory(self, transition):
@@ -57,10 +52,10 @@ class DQNAgent:
             return
         minibatch = random.sample(self.replay_memory, MINIBATCH_SIZE)
         current_states = np.array([transition[0] for transition in minibatch])/255  # noqa
-        with self.graph.as_default():
+        with tf.GradientTape() as tape:
             current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)  # noqa
         new_current_states = np.array([transition[3] for transition in minibatch])/255  # noqa
-        with self.graph.as_default():
+        with tf.GradientTape() as tape:
             future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)  # noqa
 
         X = []
@@ -82,7 +77,7 @@ class DQNAgent:
             log_this_step = True
             self.last_logged_episode = self.tensorboard.step
 
-        with self.graph.as_default():
+        with tf.GradientTape() as tape:
             self.model.fit(np.array(X)/255, np.array(y), batch_size=TRAINING_BATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)  # noqa
 
         if log_this_step:
@@ -95,12 +90,19 @@ class DQNAgent:
     def get_qs(self, state):
         return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]  # noqa
 
+    def set_training_initialized(self, value):
+        self.training_initialized = True        
+
+    def get_training_initialized(self):
+        return self.training_initialized
+
     def train_in_loop(self):
         X = np.random.uniform(size=(1, self.im_height, self.im_width, 3)).astype(np.float32)  # noqa
-        y = np.random.uniform(size=(1, 3)).astype(np.float32)
-        with self.graph_as_default():
+        y = np.random.uniform(size=(1, 7)).astype(np.float32)
+        with tf.GradientTape() as tape:
+            print(" WOOOOOOOOOOOOOOOOOOOHOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
             self.model.fit(X, y, verbose=False, batch_size=1)
-        self.training_initialized = True
+        self.set_training_initialized(True)
 
         while True:
             if self.terminate:

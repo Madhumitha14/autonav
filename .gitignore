@@ -1,4 +1,6 @@
 venv/
 .vscode/
 .__pycache__/
+models/
+logs/
 deepqtut.py
