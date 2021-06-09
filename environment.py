@@ -26,21 +26,19 @@ VEHICLE_NAME = 'audi'
 MODEL_NAME = 'a2'
 IMAGE_SIZE_X = 533
 IMAGE_SIZE_Y = 300
+SECONDS_PER_EPISODE = 10
 
 
 class CarlaEnvironment:
 
-    def __init__(self, map='Town01'):
+    def __init__(self, im_height, im_width, map='Town03'):
         self.client = carla.Client('localhost', 2000)
         self.world = self.client.load_world(map)
         self.map = self.world.get_map()
         self.blueprint_library = self.world.get_blueprint_library()
         self.spawn_points = self.map.get_spawn_points()
-        self.actor_list = []
-        self.collisions = []
-        self.lane_invasions = []
-        self.rgb_camera_data = None
-        self.depth_camera_data = None
+        self.im_height = im_height
+        self.im_width = im_width
 
     def reset(self):
         self.actor_list = []
@@ -56,14 +54,12 @@ class CarlaEnvironment:
         self.vehicle.apply_control(carla.VehicleControl(throttle=0.0, brake=0.0))  # noqa
         self.rgb_camera = None
         self.depth_sensor = None
-        self.add_rgb_camera()
-        self.add_depth_sensor()
-        self.add_collision_sensor()
+        self.episode_start = time.time()
 
     def add_rgb_camera(self, x=3, y=0, z=2):
         rgb_camera_bp = self.blueprint_library.find('sensor.camera.rgb')
-        rgb_camera_bp.set_attribute("image_size_x", f"{IMAGE_SIZE_X}")
-        rgb_camera_bp.set_attribute("image_size_y", f"{IMAGE_SIZE_Y}")
+        rgb_camera_bp.set_attribute("image_size_x", f"{self.im_width}")
+        rgb_camera_bp.set_attribute("image_size_y", f"{self.im_height}")
         rgb_camera_bp.set_attribute("fov", "120")
         rgb_camera_transform = carla.Transform(carla.Location(x, y, z))
         self.rgb_camera = self.world.try_spawn_actor(rgb_camera_bp, rgb_camera_transform, attach_to=self.vehicle)  # noqa
@@ -72,13 +68,13 @@ class CarlaEnvironment:
 
     def add_depth_sensor(self, x=3, y=0, z=2):
         depth_sensor_bp = self.blueprint_library.find('sensor.camera.depth')
-        depth_sensor_bp.set_attribute("image_size_x", f"{IMAGE_SIZE_X}")
-        depth_sensor_bp.set_attribute("image_size_y", f"{IMAGE_SIZE_Y}")
+        depth_sensor_bp.set_attribute("image_size_x", f"{self.im_width}")
+        depth_sensor_bp.set_attribute("image_size_y", f"{self.im_height}")
         depth_sensor_bp.set_attribute("fov", "120")
         depth_sensor_transform = carla.Transform(carla.Location(x, y, z))
         self.depth_sensor = self.world.try_spawn_actor(depth_sensor_bp, depth_sensor_transform, attach_to=self.vehicle)  # noqa
         self.actor_list.append(self.rgb_camera)
-        self.depth_sensor.listen(lambda image: self.process_image(image, 'depth'))
+        self.depth_sensor.listen(lambda image: self.process_image(image, 'depth'))  # noqa
 
     def add_collision_sensor(self):
         collision_sensor_bp = self.blueprint_library.find('sensor.other.collision')  # noqa
@@ -100,11 +96,10 @@ class CarlaEnvironment:
 
     def process_image(self, image, camera):
         img = np.array(image.raw_data)
-        img = img.reshape((IMAGE_SIZE_Y, IMAGE_SIZE_X, 4))
+        img = img.reshape((self.im_height, self.im_width, 4))
         img = img[:, :, :3]
-        # if show_preview == True:
-        #     cv2.imshow("Hood Cam", img)
-        #     cv2.waitKey(1)
+        cv2.imshow("Hood Cam", img)
+        cv2.waitKey(1)
         if camera == 'rgb':
             self.rgb_camera_data = img
         if camera == 'depth':
@@ -125,6 +120,23 @@ class CarlaEnvironment:
             self.vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))  # noqa
         if action == 6:
             self.vehicle.apply_control(carla.VehicleControl(throttle=0.0, steer=0.0))  # noqa
+
+        velocity = self.vehicle.get_velocity()
+        kmh = int(3.6 * math.sqrt(v.x**2 + v.y**2 + v.z**2))
+
+        if len(self.collision) != 0:
+            done = True
+            reward = -200
+        elif kmh < 50:
+            done = False
+            reward = -2
+        if len(self.lane_invasions) != 0:
+            reward = -1 * len(self.lane_invasions)
+
+        if self.episode_start + SECONDS_PER_EPISODE < time.time():
+            done = True
+
+        return self.front_camera, reward, done, None
 
     def cleanup(self):
         for actor in self.actor_list:
