@@ -8,6 +8,7 @@ from modified_tensorboard import ModifiedTensorBoard
 import tensorflow as tf
 from threading import Thread
 from tqdm import tqdm
+import random
 backend = tf.compat.v1.keras.backend
 
 MINIMUM_REPLAY_MEMORY_SIZE = 1_000
@@ -52,11 +53,13 @@ class DQNAgent:
             return
         minibatch = random.sample(self.replay_memory, MINIBATCH_SIZE)
         current_states = np.array([transition[0] for transition in minibatch])/255  # noqa
-        with tf.GradientTape() as tape:
-            current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)  # noqa
+        #with tf.GradientTape() as tape:
+        #    current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)  # noqa
+        current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)  # noqa
         new_current_states = np.array([transition[3] for transition in minibatch])/255  # noqa
-        with tf.GradientTape() as tape:
-            future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)  # noqa
+        #with tf.GradientTape() as tape:
+        #    future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)  # noqa
+        future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)  # noqa
 
         X = []
         y = []
@@ -77,8 +80,7 @@ class DQNAgent:
             log_this_step = True
             self.last_logged_episode = self.tensorboard.step
 
-        with tf.GradientTape() as tape:
-            self.model.fit(np.array(X)/255, np.array(y), batch_size=TRAINING_BATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)  # noqa
+        self.model.fit(np.array(X)/255, np.array(y), batch_size=TRAINING_BATCH_SIZE, verbose=0, shuffle=False, callbacks=[self.tensorboard] if log_this_step else None)  # noqa
 
         if log_this_step:
             self.target_update_counter += 1
@@ -99,9 +101,7 @@ class DQNAgent:
     def train_in_loop(self):
         X = np.random.uniform(size=(1, self.im_height, self.im_width, 3)).astype(np.float32)  # noqa
         y = np.random.uniform(size=(1, 7)).astype(np.float32)
-        with tf.GradientTape() as tape:
-            print(" WOOOOOOOOOOOOOOOOOOOHOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-            self.model.fit(X, y, verbose=False, batch_size=1)
+        self.model.fit(X, y, verbose=False, batch_size=1)
         self.set_training_initialized(True)
 
         while True:

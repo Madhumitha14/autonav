@@ -34,7 +34,8 @@ class CarlaEnvironment:
 
     def __init__(self, im_height, im_width, map='Town03'):
         self.client = carla.Client('localhost', 2000)
-        self.world = self.client.load_world(map)
+        #self.world = self.client.load_world(map)
+        self.world = self.client.get_world()
         self.map = self.world.get_map()
         self.blueprint_library = self.world.get_blueprint_library()
         self.spawn_points = self.map.get_spawn_points()
@@ -46,17 +47,17 @@ class CarlaEnvironment:
         self.collisions = []
         self.lane_invasions = []
         vehicle_blueprint = self.blueprint_library.filter(f"vehicle.{VEHICLE_NAME}.{MODEL_NAME}")[0]  # noqa
-        vehicle_spawn_location = random.choice(self.spawn_points)
         while True:
-            self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, vehicle_spawn_location)  # noqa
+            self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, random.choice(self.spawn_points))  # noqa
             if self.vehicle != None:
                 break
         self.actor_list.append(self.vehicle)
         self.vehicle.apply_control(carla.VehicleControl(throttle=0.0, brake=0.0))  # noqa
         self.rgb_camera = None
         self.depth_sensor = None
+        self.rgb_camera_data = None
         self.episode_start = time.time()
-        return self.rgb_camera
+        return self.rgb_camera_data
 
     def add_rgb_camera(self, x=3, y=0, z=2):
         rgb_camera_bp = self.blueprint_library.find('sensor.camera.rgb')
@@ -100,8 +101,9 @@ class CarlaEnvironment:
         img = np.array(image.raw_data)
         img = img.reshape((self.im_height, self.im_width, 4))
         img = img[:, :, :3]
-        cv2.imshow("Hood Cam", img)
-        cv2.waitKey(1)
+        if False:
+            cv2.imshow("Hood Cam", img)
+            cv2.waitKey(1)
         if camera == 'rgb':
             self.rgb_camera_data = img
         if camera == 'depth':
@@ -126,7 +128,7 @@ class CarlaEnvironment:
         velocity = self.vehicle.get_velocity()
         kmh = int(3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2))
 
-        if len(self.collision) != 0:
+        if len(self.collisions) != 0:
             done = True
             reward = -200
         elif kmh < 50:
@@ -138,7 +140,7 @@ class CarlaEnvironment:
         if self.episode_start + SECONDS_PER_EPISODE < time.time():
             done = True
 
-        return self.front_camera, reward, done, None
+        return self.rgb_camera_data, reward, done, None
 
     def cleanup(self):
         for actor in self.actor_list:

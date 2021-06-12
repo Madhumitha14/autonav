@@ -32,13 +32,23 @@ env.add_lane_invasion()
 trainer_thread = Thread(target=agent.train_in_loop, daemon=True)
 trainer_thread.start()
 
+count = 0
 while True:
     if(agent.get_training_initialized()):
         break
-    print('waiting on trainer thread***************************************')
+    if count % 5 == 0:
+        print("\\", end="")
+    if count % 5 == 1:
+        print("|", end="")
+    if count % 5 == 2:
+        print("-", end="")
+    if count % 5 == 3:
+        print("/", end="")
+    if count % 5 == 4:
+        print("|", end="")
     time.sleep(0.01)
-
-print('trainer thread wating compelted !!!!!!!! ***************************************')
+    print("\b", end="")
+    count += count
 
 agent.get_qs(np.ones((IM_HEIGHT, IM_WIDTH, 3)))
 
@@ -53,16 +63,18 @@ for episode in tqdm(range(1, EPISODES+1), ascii=True, unit="episodes"):
 
     while True:
         if np.random.random() > epsilon:
-            action = np.argmax(agent.get_qs(current_state))
+            if current_state != None:
+                action = np.argmax(agent.get_qs(current_state))
+            else:
+                action = 0
         else:
-            action = np.random.randint(0, 3)
+            action = np.random.randint(0, 7)
             time.sleep(1/FPS)
         new_state, reward, done, _ = env.step(action)
         episode_reward += reward
         agent.update_replay_memory((current_state, action, reward, new_state, done))  # noqa
         current_state = new_state
         step += 1
-        print('running')
 
         if done:
             print('done')
