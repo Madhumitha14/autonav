@@ -59,6 +59,18 @@ class CarlaEnvironment:
         self.episode_start = time.time()
         return self.rgb_camera_data
 
+    def lane_detection_vehicle(self):
+        self.actor_list = []
+        vehicle_blueprint = self.blueprint_library.filter(f"vehicle.{VEHICLE_NAME}.{MODEL_NAME}")[0]  # noqa
+        while True:
+            self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, random.choice(self.spawn_points))  # noqa
+            if self.vehicle != None:
+                break
+        self.vehicle.set_autopilot(enabled=True)
+        self.actor_list.append(self.vehicle)
+        self.rgb_camera = None
+        self.rgb_camera_data = None
+
     def add_rgb_camera(self, x=3, y=0, z=2):
         rgb_camera_bp = self.blueprint_library.find('sensor.camera.rgb')
         rgb_camera_bp.set_attribute("image_size_x", f"{self.im_width}")
@@ -126,7 +138,8 @@ class CarlaEnvironment:
             self.vehicle.apply_control(carla.VehicleControl(throttle=0.2, steer=0.0))  # noqa
 
         velocity = self.vehicle.get_velocity()
-        kmh = int(3.6 * math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2))
+        kmh = int(3.6 * math.sqrt(velocity.x**2 +
+                  velocity.y**2 + velocity.z**2))
 
         if len(self.collisions) != 0:
             done = True
