@@ -4,13 +4,15 @@ from threading import Thread
 import numpy as np
 from tqdm import tqdm
 import math
+import sys
+import itertools
 
 from environment import CarlaEnvironment
 from deep_q_learning import DQNAgent
 
 IM_HEIGHT = 300
 IM_WIDTH = 533
-EPISODES = 100
+EPISODES = 10
 AGGREGATE_STATS_EVERY = 10
 MIN_REWARD = -200
 FPS = 20
@@ -32,23 +34,12 @@ env.add_lane_invasion()
 trainer_thread = Thread(target=agent.train_in_loop, daemon=True)
 trainer_thread.start()
 
-count = 0
-while True:
-    if(agent.get_training_initialized()):
-        break
-    if count % 5 == 0:
-        print("\\", end="")
-    if count % 5 == 1:
-        print("|", end="")
-    if count % 5 == 2:
-        print("-", end="")
-    if count % 5 == 3:
-        print("/", end="")
-    if count % 5 == 4:
-        print("|", end="")
-    time.sleep(0.01)
-    print("\b", end="")
-    count += count
+spinner = itertools.cycle(['- ', '/ ', '| ', '\\ '])
+while (not agent.training_initialized):
+    sys.stdout.write(next(spinner))
+    sys.stdout.flush()
+    time.sleep(0.1)
+    sys.stdout.write('\b\b')
 
 agent.get_qs(np.ones((IM_HEIGHT, IM_WIDTH, 3)))
 

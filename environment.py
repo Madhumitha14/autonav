@@ -41,16 +41,16 @@ class CarlaEnvironment:
         self.spawn_points = self.map.get_spawn_points()
         self.im_height = im_height
         self.im_width = im_width
+        self.actor_list = []
 
     def reset(self):
-        self.actor_list = []
         self.collisions = []
         self.lane_invasions = []
         vehicle_blueprint = self.blueprint_library.filter(f"vehicle.{VEHICLE_NAME}.{MODEL_NAME}")[0]  # noqa
-        while True:
-            self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, random.choice(self.spawn_points))  # noqa
-            if self.vehicle != None:
-                break
+        self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, random.choice(self.spawn_points))  # noqa
+        if self.vehicle == None:
+            print("unable to spawn vehicle")
+            return
         self.actor_list.append(self.vehicle)
         self.vehicle.apply_control(carla.VehicleControl(throttle=0.0, brake=0.0))  # noqa
         self.rgb_camera = None
@@ -62,10 +62,10 @@ class CarlaEnvironment:
     def lane_detection_vehicle(self):
         self.actor_list = []
         vehicle_blueprint = self.blueprint_library.filter(f"vehicle.{VEHICLE_NAME}.{MODEL_NAME}")[0]  # noqa
-        while True:
-            self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, random.choice(self.spawn_points))  # noqa
-            if self.vehicle != None:
-                break
+        self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, random.choice(self.spawn_points))  # noqa
+        if self.vehicle == None:
+            print("unable to spawn vehicle")
+            return
         self.vehicle.set_autopilot(enabled=True)
         self.actor_list.append(self.vehicle)
         self.rgb_camera = None
@@ -113,7 +113,7 @@ class CarlaEnvironment:
         img = np.array(image.raw_data)
         img = img.reshape((self.im_height, self.im_width, 4))
         img = img[:, :, :3]
-        if False:
+        if True:
             cv2.imshow("Hood Cam", img)
             cv2.waitKey(1)
         if camera == 'rgb':

@@ -30,6 +30,7 @@ class DQNAgent:
         self.target_model.set_weights(self.model.get_weights())
         self.replay_memory = deque(maxlen=REPLAY_MEMORY_SIZE)
         self.tensorboard = ModifiedTensorBoard(log_dir=f"logs/Xception-{int(time.time())}")  # noqa
+        #self.tensorboard = tf.keras.callbacks.TensorBoard(log_dir=f"logs/Xception-{int(time.time())}", write_graph=True, write_images=False, write_steps_per_second=False, update_freq="epoch")  # noqa
         self.target_update_counter = 0
         self.graph = tf.Graph()
         self.terminate = False
@@ -53,12 +54,12 @@ class DQNAgent:
             return
         minibatch = random.sample(self.replay_memory, MINIBATCH_SIZE)
         current_states = np.array([transition[0] for transition in minibatch])/255  # noqa
-        #with tf.GradientTape() as tape:
-        #    current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)  # noqa
+        with self.graph.as_default():
+            current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)  # noqa
         current_qs_list = self.model.predict(current_states, PREDICTION_BATCH_SIZE)  # noqa
         new_current_states = np.array([transition[3] for transition in minibatch])/255  # noqa
-        #with tf.GradientTape() as tape:
-        #    future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)  # noqa
+        with self.graph.as_default():
+            future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)  # noqa
         future_qs_list = self.target_model.predict(new_current_states, PREDICTION_BATCH_SIZE)  # noqa
 
         X = []
@@ -93,7 +94,7 @@ class DQNAgent:
         return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]  # noqa
 
     def set_training_initialized(self, value):
-        self.training_initialized = True        
+        self.training_initialized = True
 
     def get_training_initialized(self):
         return self.training_initialized
