@@ -9,6 +9,9 @@ import time
 import numpy as np
 import wget
 import object_detection
+from object_detection.utils import config_util
+from object_detection.protos import pipeline_pb2
+from google.protobuf import text_format
 import sys
 sys.path.insert(1, "..\\")
 from environment import CarlaEnvironment  # noqa
@@ -58,11 +61,18 @@ files = {
     "LABEL_MAP": os.path.join(paths['ANNOTATIONS'], 'label_map.pbtxt'),
     "GENERATE_TF_RECORD": os.path.join(paths['SCRIPTS'], 'generate_tf_records.py'),
     "TRAIN_RECORD": os.path.join(paths['ANNOTATIONS'], 'train.record'),
-    "TEST_RECORD": os.path.join(paths['ANNOTATIONS'], 'test.record')
+    "TEST_RECORD": os.path.join(paths['ANNOTATIONS'], 'test.record'),
+    "PIPELINE_CONFIG": os.path.join(paths['CHECKPOINT'], 'pipeline.config')
 }
 
+# -------------------------CONSTANTS-------------------------------
+
+TRAINING_SCRIPT = os.path.join(
+    paths['API_MODEL'], 'research', 'object_detection', 'model_main_tf2.py')
 
 # -------------------------IMAGE COLLECTOR FOR CARLA---------------
+
+
 class ImageCollector:
     def __init__(self, image_height, image_width):
         self.image_height = image_height
@@ -161,11 +171,34 @@ class Agent:
         os.system(command)
 
     def copy_model(self):
-        if os.path.isfile(os.path.join(paths['CHECKPOINT'], 'pipeline.config')):
+        if os.path.isfile(files['PIPELINE_CONFIG']):
             return
         if not os.path.exists(paths['CHECKPOINT']):
             os.mkdir(paths['CHECKPOINT'])
         shutil.copy(os.path.join(paths['PRE_TRAINED_MODEL'], PRE_TRAINED_MODEL_NAME, 'pipeline.config'), os.path.join(paths['CHECKPOINT']))  # noqa
+        self.update_config()
+
+    def update_config(self):
+        config = config_util.get_configs_from_pipeline_file(files['PIPELINE_CONFIG'])  # noqa
+        pipeline_config = pipeline_pb2.TrainEvalPipelineConfig()
+        with tf.io.gfile.GFile(files['PIPELINE_CONFIG'], "r") as f:
+            proto_str = f.read()
+            text_format.Merge(proto_str, pipeline_config)
+        pipeline_config.model.ssd.num_classes = len(self.labels)
+        pipeline_config.train_config.batch_size = 4
+        pipeline_config.train_config.fine_tune_checkpoint = os.path.join(paths['PRE_TRAINED_MODEL'], PRE_TRAINED_MODEL_NAME, 'checkpoint', 'ckpt-0')  # noqa
+        pipeline_config.train_config.fine_tune_checkpoint_type = "detection"
+        pipeline_config.train_input_reader.label_map_path = files['LABEL_MAP']  # noqa
+        pipeline_config.train_input_reader.tf_record_input_reader.input_path[:] = [files['TRAIN_RECORD']]  # noqa
+        pipeline_config.eval_input_reader[0].label_map_path = files['LABEL_MAP']  # noqa
+        pipeline_config.eval_input_reader[0].tf_record_input_reader.input_path[:] = [files['TEST_RECORD']]  # noqa
+        config_text = text_format.MessageToString(pipeline_config)
+        with tf.io.gfile.GFile(files['PIPELINE_CONFIG'], "wb") as f:
+            f.write(config_text)
+
+    def train(self):
+        command = f"python {TRAINING_SCRIPT} --model_dir={paths['CHECKPOINT']} --pipeline_config_path={files['PIPELINE_CONFIG']} --num_train_steps=2000"  # noqa
+        os.system(command)
 
 
 def main():
@@ -178,12 +211,15 @@ def main():
         collect_images(image_height, image_width)
     '''
 
-    # TRAIN TENSORFLOW MODEL
+    # SETTING UP THE TENSORFLOW MODEL
     agent = Agent()
     agent.download_pretrained_model()
     agent.create_label_map()
     agent.create_tf_records()
     agent.copy_model()
+
+    # TRAIN TENSORFLOW MODEL
+    agent.train()
 
 
 if __name__ == "__main__":
