@@ -1,0 +1,24 @@
+item { 
+	name:'bike'
+	id:1
+}
+item { 
+	name:'car'
+	id:2
+}
+item { 
+	name:'pedestrian'
+	id:3
+}
+item { 
+	name:'pole'
+	id:4
+}
+item { 
+	name:'signal'
+	id:5
+}
+item { 
+	name:'signal-pole'
+	id:6
+}

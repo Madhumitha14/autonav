@@ -54,7 +54,9 @@ paths = {
     "PROTOC": os.path.join('Object Detection', 'dependencies', 'protoc'),
     "OUTPUT": os.path.join('Object Detection', 'workspace', 'models', CUSTOM_MODEL_NAME, 'export')
 }
-files = {}
+files = {
+    "LABEL_MAP": os.path.join(paths['ANNOTATIONS'], 'label_map.pbtxt')
+}
 
 
 # -------------------------IMAGE COLLECTOR FOR CARLA---------------
@@ -123,13 +125,30 @@ def collect_images(image_height, image_width):
 
 class Agent:
     def __init__(self):
-        print("I am a little agent, short and stout")
+        self.labels = [
+            {"name": "bike", "id": 1},
+            {"name": "car", "id": 2},
+            {"name": "pedestrian", "id": 3},
+            {"name": "pole", "id": 4},
+            {"name": "signal", "id": 5},
+            {"name": "signal-pole", "id": 6},
+        ]
 
     def download_pretrained_model(self):
         wget.download(PRE_TRAINED_MODEL_URL)
-        os.system(
-            f"move {PRE_TRAINED_MODEL_NAME}.tar.gz {paths['PRE_TRAINED_MODEL']}")
-        os.system()
+        shutil.move(f"{PRE_TRAINED_MODEL_NAME}.tar.gz", paths['PRE_TRAINED_MODEL'])  # noqa
+        os.system(f"cd {paths['PRE_TRAINED_MODEL']} && tar -zxvf {PRE_TRAINED_MODEL_NAME}.tar.gz")  # noqa
+
+    def create_label_map(self):
+        with open(files['LABEL_MAP'], 'w') as f:
+            for label in self.labels:
+                f.write('item { \n')
+                f.write(f'\tname:\'{label["name"]}\'\n')
+                f.write(f'\tid:{label["id"]}\n')
+                f.write('}\n')
+
+    def create_tf_records(self):
+        pass
 
 
 def main():
@@ -144,6 +163,9 @@ def main():
 
     # TRAIN TENSORFLOW MODEL
     agent = Agent()
+    if not os.path.exists(os.path.join(paths['PRE_TRAINED_MODEL'], PRE_TRAINED_MODEL_NAME)):
+        agent.download_pretrained_model()
+    agent.create_label_map()
 
 
 if __name__ == "__main__":
