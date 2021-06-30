@@ -55,7 +55,10 @@ paths = {
     "OUTPUT": os.path.join('Object Detection', 'workspace', 'models', CUSTOM_MODEL_NAME, 'export')
 }
 files = {
-    "LABEL_MAP": os.path.join(paths['ANNOTATIONS'], 'label_map.pbtxt')
+    "LABEL_MAP": os.path.join(paths['ANNOTATIONS'], 'label_map.pbtxt'),
+    "GENERATE_TF_RECORD": os.path.join(paths['SCRIPTS'], 'generate_tf_records.py'),
+    "TRAIN_RECORD": os.path.join(paths['ANNOTATIONS'], 'train.record'),
+    "TEST_RECORD": os.path.join(paths['ANNOTATIONS'], 'test.record')
 }
 
 
@@ -135,6 +138,8 @@ class Agent:
         ]
 
     def download_pretrained_model(self):
+        if os.path.exists(os.path.join(paths['PRE_TRAINED_MODEL'], PRE_TRAINED_MODEL_NAME)):
+            return
         wget.download(PRE_TRAINED_MODEL_URL)
         shutil.move(f"{PRE_TRAINED_MODEL_NAME}.tar.gz", paths['PRE_TRAINED_MODEL'])  # noqa
         os.system(f"cd {paths['PRE_TRAINED_MODEL']} && tar -zxvf {PRE_TRAINED_MODEL_NAME}.tar.gz")  # noqa
@@ -148,7 +153,19 @@ class Agent:
                 f.write('}\n')
 
     def create_tf_records(self):
-        pass
+        if os.path.isfile(files['TEST_RECORD']) and os.path.isfile(files['TRAIN_RECORD']):
+            return
+        command = f"python \"{files['GENERATE_TF_RECORD']}\" -x \"{paths['TRAIN_IMAGES']}\" -l \"{files['LABEL_MAP']}\" -o \"{files['TRAIN_RECORD']}\""  # noqa
+        os.system(command)
+        command = f"python \"{files['GENERATE_TF_RECORD']}\" -x \"{paths['TEST_IMAGES']}\" -l \"{files['LABEL_MAP']}\" -o \"{files['TEST_RECORD']}\""  # noqa
+        os.system(command)
+
+    def copy_model(self):
+        if os.path.isfile(os.path.join(paths['CHECKPOINT'], 'pipeline.config')):
+            return
+        if not os.path.exists(paths['CHECKPOINT']):
+            os.mkdir(paths['CHECKPOINT'])
+        shutil.copy(os.path.join(paths['PRE_TRAINED_MODEL'], PRE_TRAINED_MODEL_NAME, 'pipeline.config'), os.path.join(paths['CHECKPOINT']))  # noqa
 
 
 def main():
@@ -163,9 +180,10 @@ def main():
 
     # TRAIN TENSORFLOW MODEL
     agent = Agent()
-    if not os.path.exists(os.path.join(paths['PRE_TRAINED_MODEL'], PRE_TRAINED_MODEL_NAME)):
-        agent.download_pretrained_model()
+    agent.download_pretrained_model()
     agent.create_label_map()
+    agent.create_tf_records()
+    agent.copy_model()
 
 
 if __name__ == "__main__":
