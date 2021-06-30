@@ -5,3 +5,5 @@ deepqtut.py
 train/
 Object\ Detection/images
 Autonomous\ Driving/images
+Object\ Detection/workspace/models/*/eval
+Object\ Detection/workspace/models/*/train
