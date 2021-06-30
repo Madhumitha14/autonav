@@ -38,9 +38,9 @@ IMAGE_DIMENSIONS = [(1080, 1920), (300, 533), (480, 640), (720, 1280)]
 
 # -------------------------CONSTANTS-------------------------------
 
-CUSTOM_MODEL_NAME = "ssd_mobnet_320x320"
-PRE_TRAINED_MODEL_NAME = "ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8"
-PRE_TRAINED_MODEL_URL = "http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8.tar.gz"
+CUSTOM_MODEL_NAME = "ssd_mobnet_640x640"
+PRE_TRAINED_MODEL_NAME = "ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8"
+PRE_TRAINED_MODEL_URL = "http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz"
 
 # -------------------------PATHS AND FILES-------------------------
 
@@ -197,7 +197,11 @@ class Agent:
             f.write(config_text)
 
     def train(self):
-        command = f"python {TRAINING_SCRIPT} --model_dir={paths['CHECKPOINT']} --pipeline_config_path={files['PIPELINE_CONFIG']} --num_train_steps=2000"  # noqa
+        command = f"python \"{TRAINING_SCRIPT}\" --model_dir=\"{paths['CHECKPOINT']}\" --pipeline_config_path=\"{files['PIPELINE_CONFIG']}\" --num_train_steps=2000"  # noqa
+        os.system(command)
+
+    def evaluate(self):
+        command = f"python \"{TRAINING_SCRIPT}\" --model_dir=\"{paths['CHECKPOINT']}\" --pipeline_config_path=\"{files['PIPELINE_CONFIG']}\" --checkpoint_dir=\"{paths['CHECKPOINT']}\""  # noqa
         os.system(command)
 
 
@@ -220,6 +224,7 @@ def main():
 
     # TRAIN TENSORFLOW MODEL
     agent.train()
+    agent.evaluate()
 
 
 if __name__ == "__main__":
