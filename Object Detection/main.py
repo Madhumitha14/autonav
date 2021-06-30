@@ -7,6 +7,8 @@ import glob
 import shutil
 import time
 import numpy as np
+import wget
+import object_detection
 import sys
 sys.path.insert(1, "..\\")
 from environment import CarlaEnvironment  # noqa
@@ -23,17 +25,39 @@ except IndexError:
 
 import carla  # noqa
 
+# -------------------------END OF IMPORTS-------------------------
+
 os.chdir("..")
 
-IMAGE_DIMENSIONS = [(300, 533), (480, 640), (720, 1280), (1080, 1920)]
-IMAGE_DIMENSIONS = [(480, 640)]
-IMAGE_DIMENSIONS = [(720, 1280)]
-IMAGE_DIMENSIONS = [(1080, 1920)]
+# -------------------------IMAGE DIMENSIONS-----------------------
 
-paths = {}
+IMAGE_DIMENSIONS = [(1080, 1920), (300, 533), (480, 640), (720, 1280)]
+
+# -------------------------CONSTANTS-------------------------------
+
+CUSTOM_MODEL_NAME = "ssd_mobnet_320x320"
+PRE_TRAINED_MODEL_NAME = "ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8"
+PRE_TRAINED_MODEL_URL = "http://download.tensorflow.org/models/object_detection/tf2/20200711/ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8.tar.gz"
+
+# -------------------------PATHS AND FILES-------------------------
+
+paths = {
+    "WORKSPACE": os.path.join('Object Detection', 'workspace'),
+    "TRAIN_IMAGES": os.path.join('Object Detection', 'images', 'train'),
+    "TEST_IMAGES": os.path.join('Object Detection', 'images', 'test'),
+    "SCRIPTS": os.path.join('Object Detection', 'scripts'),
+    "API_MODEL": os.path.join('Object Detection', 'dependencies', 'apimodel'),
+    "ANNOTATIONS": os.path.join('Object Detection', 'workspace', 'annotations'),
+    "MODELS": os.path.join('Object Detection', 'workspace', 'models'),
+    "PRE_TRAINED_MODEL": os.path.join('Object Detection', 'workspace', 'pretrained_models'),
+    "CHECKPOINT": os.path.join('Object Detection', 'workspace', 'models', CUSTOM_MODEL_NAME),
+    "PROTOC": os.path.join('Object Detection', 'dependencies', 'protoc'),
+    "OUTPUT": os.path.join('Object Detection', 'workspace', 'models', CUSTOM_MODEL_NAME, 'export')
+}
 files = {}
 
 
+# -------------------------IMAGE COLLECTOR FOR CARLA---------------
 class ImageCollector:
     def __init__(self, image_height, image_width):
         self.image_height = image_height
@@ -101,9 +125,26 @@ class Agent:
     def __init__(self):
         print("I am a little agent, short and stout")
 
+    def download_pretrained_model(self):
+        wget.download(PRE_TRAINED_MODEL_URL)
+        os.system(
+            f"move {PRE_TRAINED_MODEL_NAME}.tar.gz {paths['PRE_TRAINED_MODEL']}")
+        os.system()
 
-if __name__ == "__main__":
+
+def main():
+
+    # COLLECT IMAGES FROM CARLA
+    '''
     for dim in IMAGE_DIMENSIONS:
         image_height, image_width = dim
         print(f"Collecting images for {image_width}x{image_height}")
         collect_images(image_height, image_width)
+    '''
+
+    # TRAIN TENSORFLOW MODEL
+    agent = Agent()
+
+
+if __name__ == "__main__":
+    main()
