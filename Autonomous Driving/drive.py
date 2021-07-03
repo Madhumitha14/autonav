@@ -18,7 +18,7 @@ flask_app = Flask(__name__)
 model = None
 prev_image_array = None
 
-MAX_SPEED = 30
+MAX_SPEED = 25
 MIN_SPEED = 10
 
 speed_limit = MAX_SPEED

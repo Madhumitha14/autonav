@@ -5,5 +5,9 @@ deepqtut.py
 train/
 Object\ Detection/images
 Autonomous\ Driving/images
-Object\ Detection/workspace/models/*/eval
-Object\ Detection/workspace/models/*/train
+Object\ Detection/workspace/models/
+Object\ Detection/workspace/pretrained_models
+Autonomous\ Driving/data/
+Autonomous\ Driving/models/
+Records/Lane\ Detection/images/
+Records/Lane\ Detection/videos/

@@ -18,7 +18,3 @@ item {
 	name:'signal'
 	id:5
 }
-item { 
-	name:'signal-pole'
-	id:6
-}

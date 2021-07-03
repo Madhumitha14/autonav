@@ -34,7 +34,7 @@ class CarlaEnvironment:
 
     def __init__(self, im_height, im_width, map='Town03'):
         self.client = carla.Client('localhost', 2000)
-        #self.world = self.client.load_world(map)
+        self.world = self.client.load_world(map)
         self.world = self.client.get_world()
         self.map = self.world.get_map()
         self.blueprint_library = self.world.get_blueprint_library()
@@ -62,7 +62,9 @@ class CarlaEnvironment:
     def lane_detection_vehicle(self):
         self.actor_list = []
         vehicle_blueprint = self.blueprint_library.filter(f"vehicle.{VEHICLE_NAME}.{MODEL_NAME}")[0]  # noqa
-        self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, random.choice(self.spawn_points))  # noqa
+        spawn_point = random.choice(self.spawn_points)
+        spawn_point = self.spawn_points[1]
+        self.vehicle = self.world.try_spawn_actor(vehicle_blueprint, spawn_point)  # noqa
         if self.vehicle == None:
             print("unable to spawn vehicle")
             return
@@ -113,7 +115,7 @@ class CarlaEnvironment:
         img = np.array(image.raw_data)
         img = img.reshape((self.im_height, self.im_width, 4))
         img = img[:, :, :3]
-        if True:
+        if False:
             cv2.imshow("Hood Cam", img)
             cv2.waitKey(1)
         if camera == 'rgb':

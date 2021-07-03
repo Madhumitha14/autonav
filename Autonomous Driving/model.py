@@ -8,7 +8,7 @@ import os
 import utils
 
 INPUT_SHAPE = (66, 200, 3)
-DATA_DIR = "C:\\Users\\saile\\Desktop\\Train"
+DATA_DIR = os.path.join('data')
 
 
 def load_data():
@@ -39,7 +39,7 @@ def build_model():
 
 
 def train_model(model, X_train, X_test, y_train, y_test):
-    checkpoint = ModelCheckpoint('model-{epoch:03d}.h5',
+    checkpoint = ModelCheckpoint('t1v1-model-{epoch:03d}.h5',
                                  monitor="val_loss",
                                  verbose=0,
                                  save_best_only=True,
