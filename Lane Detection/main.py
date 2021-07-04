@@ -78,27 +78,20 @@ def main(town):
         frame = env.rgb_camera_data
         try:
             canny_image = detector.canny(frame)
-            cv2.imwrite(os.path.join("images", "canny", f"{int(time.time())}.jpeg"), canny_image)
-            cv2.waitKey(1)
             cropped_image = detector.region_of_interest(canny_image)
-            cv2.imwrite(os.path.join("images", "cropped", f"{int(time.time())}.jpeg"), cropped_image)
-            cv2.waitKey(1)
             lines = cv2.HoughLinesP(cropped_image, 2, np.pi / 180, 100, np.array([]), minLineLength=40, maxLineGap=5)  # noqa
             averaged_lines = detector.averaged_slope_intercept(frame, lines)
             line_image = detector.display_lines(frame, averaged_lines)
-            cv2.imwrite(os.path.join("images", "lines", f"{int(time.time())}.jpeg"), line_image)
-            cv2.waitKey(1)
             merged_image = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
         except:
             merged_image = frame
 
-        cv2.imwrite(os.path.join("images", "result", f"{int(time.time())}.jpeg"), merged_image)
+        cv2.imshow("Live Lane Detection", merged_image)
         cv2.waitKey(1)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     env.cleanup()
-
 
 
 if __name__ == "__main__":
